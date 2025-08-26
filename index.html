@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #6b8cbc;
+            --accent-color: #304c75;
+            --background-color: #f5f7fa;
+            --text-color: #333;
+            --border-color: #ddd;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .app-title {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            list-style: none;
+            border-bottom: 1px solid var(--border-color);
+            background-color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .tab {
+            padding: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-align: center;
+            flex: 1;
+            max-width: 200px;
+        }
+
+        .tab:hover {
+            background-color: #f0f0f0;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid var(--primary-color);
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 2rem 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Секция секундомера */
+        .stopwatch-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .timer-display {
+            font-size: 3rem;
+            text-align: center;
+            margin: 1rem 0;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .task-selector {
+            width: 100%;
+            padding: 0.8rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-color);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--accent-color);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #d32f2f;
+        }
+
+        .history-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .history-list {
+            list-style: none;
+            margin-top: 1rem;
+        }
+
+        .history-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-task {
+            font-weight: bold;
+        }
+
+        .history-time {
+            color: #666;
+        }
+
+        /* Секция ячеек времени */
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 2rem;
+        }
+
+        .calendar-day {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .calendar-day:hover {
+            background-color: #f0f0f0;
+        }
+
+        .calendar-day.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .day-view {
+            background-color: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .time-slots {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 5px;
+        }
+
+        .time-slot {
+            padding: 5px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .time-block {
+            height: 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .time-block:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Секция аналитики */
+        .chart-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .chart-title {
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        /* Секция настроек */
+        .settings-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .setting-item {
+            margin-bottom: 1.5rem;
+        }
+
+        .setting-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .setting-input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .tags-list {
+            list-style: none;
+            margin-top: 1rem;
+        }
+
+        .tag-item {
+            padding: 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tag-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .tabs {
+                flex-wrap: wrap;
+            }
+            
+            .tab {
+                flex: 1 0 33.33%;
+                max-width: none;
+            }
+            
+            .timer-display {
+                font-size: 2rem;
+            }
+            
+            .control-buttons {
+                flex-direction: column;
+            }
+            
+            .calendar {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .calendar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .tab {
+                flex: 1 0 50%;
+                padding: 0.8rem 0.5rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1 class="app-title">Time Tracker</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <ul class="tabs">
+            <li class="tab active" data-tab="stopwatch">Секундомер</li>
+            <li class="tab" data-tab="timeblocks">Ячейки времени</li>
+            <li class="tab" data-tab="analytics">Аналитика</li>
+            <li class="tab" data-tab="settings">Настройки</li>
+        </ul>
+
+        <!-- Секция секундомера -->
+        <div id="stopwatch" class="tab-content active">
+            <div class="stopwatch-container">
+                <select class="task-selector" id="taskSelector">
+                    <option value="">Выберите задачу</option>
+                </select>
+                <div class="timer-display" id="timer">00:00:00</div>
+                <div class="control-buttons">
+                    <button class="btn btn-primary" id="startBtn">Старт</button>
+                    <button class="btn btn-secondary" id="pauseBtn" disabled>Пауза</button>
+                    <button class="btn btn-danger" id="resetBtn" disabled>Сброс</button>
+                </div>
+            </div>
+
+            <div class="history-container">
+                <h2>История</h2>
+                <ul class="history-list" id="historyList"></ul>
+            </div>
+        </div>
+
+        <!-- Секция ячеек времени -->
+        <div id="timeblocks" class="tab-content">
+            <div class="calendar" id="calendar"></div>
+            <div class="day-view">
+                <h2 id="selectedDate">Выберите день</h2>
+                <div class="time-slots" id="timeSlots"></div>
+            </div>
+        </div>
+
+        <!-- Секция аналитики -->
+        <div id="analytics" class="tab-content">
+            <div class="chart-container">
+                <h2 class="chart-title">Средний день по меткам</h2>
+                <canvas id="dailyChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h2 class="chart-title">График по меткам за неделю</h2>
+                <canvas id="weeklyChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h2 class="chart-title">График по меткам за месяц</h2>
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Секция настроек -->
+        <div id="settings" class="tab-content">
+            <div class="settings-container">
+                <div class="setting-item">
+                    <label class="setting-label" for="newTagName">Название метки</label>
+                    <input type="text" class="setting-input" id="newTagName" placeholder="Введите название метки">
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label" for="newTagColor">Цвет метки</label>
+                    <input type="color" class="setting-input" id="newTagColor" value="#4a6fa5">
+                </div>
+                <button class="btn btn-primary" id="addTagBtn">Добавить метку</button>
+
+                <h3 style="margin-top: 2rem;">Список меток</h3>
+                <ul class="tags-list" id="tagsList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация приложения
+        document.addEventListener('DOMContentLoaded', function() {
+            // Инициализация данных, если их нет
+            initData();
+            
+            // Инициализация вкладок
+            initTabs();
+            
+            // Инициализация секундомера
+            initStopwatch();
+            
+            // Инициализация календаря
+            initCalendar();
+            
+            // Инициализация настроек
+            initSettings();
+            
+            // Загрузка данных
+            loadTags();
+            loadHistory();
+            updateAnalytics();
+        });
+
+        // Инициализация базовых данных
+        function initData() {
+            if (!localStorage.getItem('tags')) {
+                const defaultTags = [
+                    { id: 1, name: 'Работа', color: '#4a6fa5' },
+                    { id: 2, name: 'Отдых', color: '#4caf50' },
+                    { id: 3, name: 'Учеба', color: '#ff9800' },
+                    { id: 4, name: 'Спорт', color: '#f44336' }
+                ];
+                localStorage.setItem('tags', JSON.stringify(defaultTags));
+            }
+            
+            if (!localStorage.getItem('history')) {
+                localStorage.setItem('history', JSON.stringify([]));
+            }
+            
+            if (!localStorage.getItem('timeBlocks')) {
+                localStorage.setItem('timeBlocks', JSON.stringify({}));
+            }
+        }
+
+        // Инициализация вкладок
+        function initTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Убираем активный класс у всех вкладок
+                    tabs.forEach(t => t.classList.remove('active'));
+                    // Добавляем активный класс текущей вкладке
+                    tab.classList.add('active');
+                    
+                    // Скрываем все содержимое вкладок
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Показываем содержимое текущей вкладки
+                    const tabName = tab.getAttribute('data-tab');
+                    document.getElementById(tabName).classList.add('active');
+                    
+                    // Если открыта аналитика, обновляем графики
+                    if (tabName === 'analytics') {
+                        updateAnalytics();
+                    }
+                });
+            });
+        }
+
+        // Инициализация секундомера
+        function initStopwatch() {
+            const timerDisplay = document.getElementById('timer');
+            const startBtn = document.getElementById('startBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const taskSelector = document.getElementById('taskSelector');
+            
+            let startTime = 0;
+            let elapsedTime = 0;
+            let timerInterval = null;
+            let isRunning = false;
+            
+            // Загрузка тегов в селектор
+            function loadTaskSelector() {
+                const tags = JSON.parse(localStorage.getItem('tags'));
+                taskSelector.innerHTML = '<option value="">Выберите задачу</option>';
+                
+                tags.forEach(tag => {
+                    const option = document.createElement('option');
+                    option.value = tag.id;
+                    option.textContent = tag.name;
+                    taskSelector.appendChild(option);
+                });
+            }
+            
+            loadTaskSelector();
+            
+            function startTimer() {
+                if (!taskSelector.value) {
+                    alert('Пожалуйста, выберите задачу');
+                    return;
+                }
+                
+                startTime = Date.now() - elapsedTime;
+                timerInterval = setInterval(() => {
+                    elapsedTime = Date.now() - startTime;
+                    updateTimerDisplay();
+                }, 10);
+                
+                isRunning = true;
+                startBtn.disabled = true;
+                pauseBtn.disabled = false;
+                resetBtn.disabled = false;
+                taskSelector.disabled = true;
+            }
+            
+            function pauseTimer() {
+                clearInterval(timerInterval);
+                isRunning = false;
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+            }
+            
+            function resetTimer() {
+                clearInterval(timerInterval);
+                
+                if (isRunning && elapsedTime > 0) {
+                    // Сохраняем в историю
+                    saveToHistory();
+                }
+                
+                elapsedTime = 0;
+                updateTimerDisplay();
+                isRunning = false;
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+                resetBtn.disabled = true;
+                taskSelector.disabled = false;
+            }
+            
+            function updateTimerDisplay() {
+                const milliseconds = Math.floor(elapsedTime % 1000 / 10);
+                const seconds = Math.floor(elapsedTime / 1000 % 60);
+                const minutes = Math.floor(elapsedTime / 1000 / 60 % 60);
+                const hours = Math.floor(elapsedTime / 1000 / 60 / 60);
+                
+                timerDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            function saveToHistory() {
+                const selectedTagId = parseInt(taskSelector.value);
+                const tags = JSON.parse(localStorage.getItem('tags'));
+                const selectedTag = tags.find(tag => tag.id === selectedTagId);
+                
+                const historyItem = {
+                    id: Date.now(),
+                    tag: selectedTag,
+                    duration: elapsedTime,
+                    date: new Date().toISOString()
+                };
+                
+                const history = JSON.parse(localStorage.getItem('history'));
+                history.push(historyItem);
+                localStorage.setItem('history', JSON.stringify(history));
+                
+                loadHistory();
+            }
+            
+            startBtn.addEventListener('click', startTimer);
+            pauseBtn.addEventListener('click', pauseTimer);
+            resetBtn.addEventListener('click', resetTimer);
+        }
+
+        // Загрузка истории
+        function loadHistory() {
+            const historyList = document.getElementById('historyList');
+            const history = JSON.parse(localStorage.getItem('history'));
+            
+            historyList.innerHTML = '';
+            
+            if (history.length === 0) {
+                historyList.innerHTML = '<li class="history-item">История пуста</li>';
+                return;
+            }
+            
+            // Сортируем историю по дате (новые сверху)
+            history.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            history.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'history-item';
+                
+                const duration = new Date(item.duration);
+                const hours = duration.getUTCHours();
+                const minutes = duration.getUTCMinutes();
+                const seconds = duration.getUTCSeconds();
+                
+                const timeString = `${hours > 0 ? hours + 'ч ' : ''}${minutes > 0 ? minutes + 'м ' : ''}${seconds}с`;
+                
+                const date = new Date(item.date);
+                const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+                
+                li.innerHTML = `
+                    <div>
+                        <span class="history-task" style="color: ${item.tag.color}">${item.tag.name}</span>
+                        <div class="history-time">${formattedDate}</div>
+                    </div>
+                    <div>${timeString}</div>
+                `;
+                
+                historyList.appendChild(li);
+            });
+        }
+
+        // Инициализация календаря
+        function initCalendar() {
+            const calendar = document.getElementById('calendar');
+            const timeSlots = document.getElementById('timeSlots');
+            const selectedDateEl = document.getElementById('selectedDate');
+            
+            let selectedDate = new Date();
+            
+            // Генерация календаря на текущий месяц
+            function generateCalendar() {
+                calendar.innerHTML = '';
+                
+                const year = selectedDate.getFullYear();
+                const month = selectedDate.getMonth();
+                
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const daysInMonth = lastDay.getDate();
+                
+                // Добавляем заголовки дней недели
+                const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+                daysOfWeek.forEach(day => {
+                    const dayEl = document.createElement('div');
+                    dayEl.className = 'calendar-day';
+                    dayEl.textContent = day;
+                    dayEl.style.fontWeight = 'bold';
+                    calendar.appendChild(dayEl);
+                });
+                
+                // Добавляем пустые ячейки для дней перед первым днем месяца
+                for (let i = 0; i < firstDay.getDay(); i++) {
+                    const emptyDay = document.createElement('div');
+                    emptyDay.className = 'calendar-day';
+                    calendar.appendChild(emptyDay);
+                }
+                
+                // Добавляем дни месяца
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const dayEl = document.createElement('div');
+                    dayEl.className = 'calendar-day';
+                    dayEl.textContent = i;
+                    dayEl.setAttribute('data-date', `${year}-${month + 1}-${i}`);
+                    
+                    // Проверяем, является ли день текущим выбранным
+                    if (i === selectedDate.getDate() && month === selectedDate.getMonth() && year === selectedDate.getFullYear()) {
+                        dayEl.classList.add('active');
+                    }
+                    
+                    dayEl.addEventListener('click', () => {
+                        document.querySelectorAll('.calendar-day').forEach(day => day.classList.remove('active'));
+                        dayEl.classList.add('active');
+                        selectedDate = new Date(year, month, i);
+                        selectedDateEl.textContent = selectedDate.toLocaleDateString('ru-RU', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        });
+                        generateTimeSlots();
+                    });
+                    
+                    calendar.appendChild(dayEl);
+                }
+            }
+            
+            // Генерация временных слотов для выбранного дня
+            function generateTimeSlots() {
+                timeSlots.innerHTML = '';
+                
+                // Форматируем дату для использования как ключа
+                const dateKey = selectedDate.toISOString().split('T')[0];
+                
+                // Загружаем данные о временных блоках
+                const timeBlocksData = JSON.parse(localStorage.getItem('timeBlocks'));
+                const dayData = timeBlocksData[dateKey] || {};
+                
+                // Создаем слоты времени с 00:00 до 23:45 с шагом 15 минут
+                for (let hour = 0; hour < 24; hour++) {
+                    for (let minute = 0; minute < 60; minute += 15) {
+                        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                        const timeKey = `${dateKey}T${timeString}:00`;
+                        
+                        // Добавляем элемент времени
+                        const timeSlot = document.createElement('div');
+                        timeSlot.className = 'time-slot';
+                        timeSlot.textContent = timeString;
+                        timeSlots.appendChild(timeSlot);
+                        
+                        // Добавляем блок для выбора метки
+                        const timeBlock = document.createElement('div');
+                        timeBlock.className = 'time-block';
+                        timeBlock.setAttribute('data-time', timeKey);
+                        
+                        // Если для этого времени уже есть метка, применяем её
+                        if (dayData[timeKey]) {
+                            const tags = JSON.parse(localStorage.getItem('tags'));
+                            const tag = tags.find(t => t.id === dayData[timeKey]);
+                            if (tag) {
+                                timeBlock.style.backgroundColor = tag.color;
+                                timeBlock.setAttribute('data-tag', tag.id);
+                            }
+                        }
+                        
+                        timeBlock.addEventListener('click', () => {
+                            // Показываем диалог выбора метки
+                            showTagSelector(timeBlock);
+                        });
+                        
+                        timeSlots.appendChild(timeBlock);
+                    }
+                }
+            }
+            
+            // Показ диалога выбора метки для временного блока
+            function showTagSelector(timeBlock) {
+                const tags = JSON.parse(localStorage.getItem('tags'));
+                const timeKey = timeBlock.getAttribute('data-time');
+                
+                // Создаем контейнер для выбора тега
+                const tagSelector = document.createElement('div');
+                tagSelector.style.position = 'fixed';
+                tagSelector.style.top = '0';
+                tagSelector.style.left = '0';
+                tagSelector.style.width = '100%';
+                tagSelector.style.height = '100%';
+                tagSelector.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                tagSelector.style.display = 'flex';
+                tagSelector.style.justifyContent = 'center';
+                tagSelector.style.alignItems = 'center';
+                tagSelector.style.zIndex = '1000';
+                
+                // Создаем контент диалога
+                const dialog = document.createElement('div');
+                dialog.style.backgroundColor = 'white';
+                dialog.style.padding = '20px';
+                dialog.style.borderRadius = '8px';
+                dialog.style.width = '80%';
+                dialog.style.maxWidth = '400px';
+                
+                const title = document.createElement('h3');
+                title.textContent = 'Выберите метку';
+                dialog.appendChild(title);
+                
+                // Добавляем кнопки для каждой метки
+                tags.forEach(tag => {
+                    const button = document.createElement('button');
+                    button.className = 'btn';
+                    button.style.backgroundColor = tag.color;
+                    button.style.color = 'white';
+                    button.style.margin = '5px';
+                    button.textContent = tag.name;
+                    
+                    button.addEventListener('click', () => {
+                        // Применяем выбранную метку к блоку времени
+                        timeBlock.style.backgroundColor = tag.color;
+                        timeBlock.setAttribute('data-tag', tag.id);
+                        
+                        // Сохраняем в localStorage
+                        saveTimeBlock(timeKey, tag.id);
+                        
+                        // Удаляем диалог
+                        document.body.removeChild(tagSelector);
+                    });
+                    
+                    dialog.appendChild(button);
+                });
+                
+                // Кнопка для очистки метки
+                const clearButton = document.createElement('button');
+                clearButton.className = 'btn btn-danger';
+                clearButton.style.margin = '5px';
+                clearButton.textContent = 'Очистить';
+                
+                clearButton.addEventListener('click', () => {
+                    // Очищаем метку
+                    timeBlock.style.backgroundColor = '';
+                    timeBlock.removeAttribute('data-tag');
+                    
+                    // Сохраняем в localStorage
+                    saveTimeBlock(timeKey, null);
+                    
+                    // Удаляем диалог
+                    document.body.removeChild(tagSelector);
+                });
+                
+                dialog.appendChild(clearButton);
+                
+                // Кнопка отмены
+                const cancelButton = document.createElement('button');
+                cancelButton.className = 'btn';
+                cancelButton.style.margin = '5px';
+                cancelButton.textContent = 'Отмена';
+                
+                cancelButton.addEventListener('click', () => {
+                    document.body.removeChild(tagSelector);
+                });
+                
+                dialog.appendChild(cancelButton);
+                
+                tagSelector.appendChild(dialog);
+                document.body.appendChild(tagSelector);
+                
+                // Закрытие по клику вне диалога
+                tagSelector.addEventListener('click', (e) => {
+                    if (e.target === tagSelector) {
+                        document.body.removeChild(tagSelector);
+                    }
+                });
+            }
+            
+            // Сохранение временного блока
+            function saveTimeBlock(timeKey, tagId) {
+                const dateKey = timeKey.split('T')[0];
+                const timeBlocksData = JSON.parse(localStorage.getItem('timeBlocks'));
+                
+                if (!timeBlocksData[dateKey]) {
+                    timeBlocksData[dateKey] = {};
+                }
+                
+                if (tagId) {
+                    timeBlocksData[dateKey][timeKey] = tagId;
+                } else {
+                    delete timeBlocksData[dateKey][timeKey];
+                }
+                
+                localStorage.setItem('timeBlocks', JSON.stringify(timeBlocksData));
+            }
+            
+            // Инициализация
+            selectedDateEl.textContent = selectedDate.toLocaleDateString('ru-RU', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            generateCalendar();
+            generateTimeSlots();
+        }
+
+        // Инициализация настроек
+        function initSettings() {
+            const addTagBtn = document.getElementById('addTagBtn');
+            const newTagName = document.getElementById('newTagName');
+            const newTagColor = document.getElementById('newTagColor');
+            const tagsList = document.getElementById('tagsList');
+            
+            // Загрузка списка меток
+            function loadTagsList() {
+                const tags = JSON.parse(localStorage.getItem('tags'));
+                tagsList.innerHTML = '';
+                
+                tags.forEach(tag => {
+                    const li = document.createElement('li');
+                    li.className = 'tag-item';
+                    
+                    li.innerHTML = `
+                        <div>
+                            <span class="tag-color" style="background-color: ${tag.color}"></span>
+                            ${tag.name}
+                        </div>
+                        <button class="btn btn-danger delete-tag" data-id="${tag.id}">Удалить</button>
+                    `;
+                    
+                    tagsList.appendChild(li);
+                });
+                
+                // Добавляем обработчики для кнопок удаления
+                document.querySelectorAll('.delete-tag').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const tagId = parseInt(e.target.getAttribute('data-id'));
+                        deleteTag(tagId);
+                    });
+                });
+            }
+            
+            // Добавление новой метки
+            function addTag() {
+                const name = newTagName.value.trim();
+                const color = newTagColor.value;
+                
+                if (!name) {
+                    alert('Пожалуйста, введите название метки');
+                    return;
+                }
+                
+                const tags = JSON.parse(localStorage.getItem('tags'));
+                const newId = tags.length > 0 ? Math.max(...tags.map(t => t.id)) + 1 : 1;
+                
+                tags.push({
+                    id: newId,
+                    name: name,
+                    color: color
+                });
+                
+                localStorage.setItem('tags', JSON.stringify(tags));
+                
+                newTagName.value = '';
+                loadTagsList();
+                loadTaskSelector();
+                
+                alert('Метка добавлена!');
+            }
+            
+            // Удаление метки
+            function deleteTag(tagId) {
+                if (!confirm('Вы уверены, что хотите удалить эту метку?')) {
+                    return;
+                }
+                
+                const tags = JSON.parse(localStorage.getItem('tags'));
+                const updatedTags = tags.filter(tag => tag.id !== tagId);
+                
+                localStorage.setItem('tags', JSON.stringify(updatedTags));
+                loadTagsList();
+                loadTaskSelector();
+                
+                alert('Метка удалена!');
+            }
+            
+            addTagBtn.addEventListener('click', addTag);
+            loadTagsList();
+        }
+
+        // Загрузка тегов в селектор (дублируется из секундомера, нужно вынести в отдельную функцию)
+        function loadTags() {
+            const taskSelector = document.getElementById('taskSelector');
+            const tags = JSON.parse(localStorage.getItem('tags'));
+            
+            taskSelector.innerHTML = '<option value="">Выберите задачу</option>';
+            
+            tags.forEach(tag => {
+                const option = document.createElement('option');
+                option.value = tag.id;
+                option.textContent = tag.name;
+                taskSelector.appendChild(option);
+            });
+        }
+
+        // Загрузка taskSelector (дублируется из секундомера)
+        function loadTaskSelector() {
+            const taskSelector = document.getElementById('taskSelector');
+            const tags = JSON.parse(localStorage.getItem('tags'));
+            
+            taskSelector.innerHTML = '<option value="">Выберите задачу</option>';
+            
+            tags.forEach(tag => {
+                const option = document.createElement('option');
+                option.value = tag.id;
+                option.textContent = tag.name;
+                taskSelector.appendChild(option);
+            });
+        }
+
+        // Обновление аналитики
+        function updateAnalytics() {
+            updateDailyChart();
+            updateWeeklyChart();
+            updateMonthlyChart();
+        }
+
+        // Обновление графика среднего дня
+        function updateDailyChart() {
+            const ctx = document.getElementById('dailyChart').getContext('2d');
+            const timeBlocksData = JSON.parse(localStorage.getItem('timeBlocks'));
+            const tags = JSON.parse(localStorage.getItem('tags'));
+            
+            // Собираем статистику по всем дням
+            const tagStats = {};
+            tags.forEach(tag => {
+                tagStats[tag.id] = { count: 0, tag: tag };
+            });
+            
+            let totalBlocks = 0;
+            
+            // Проходим по всем дням
+            Object.keys(timeBlocksData).forEach(date => {
+                const dayData = timeBlocksData[date];
+                
+                // Проходим по всем временным блокам дня
+                Object.keys(dayData).forEach(timeKey => {
+                    const tagId = dayData[timeKey];
+                    if (tagStats[tagId]) {
+                        tagStats[tagId].count++;
+                        totalBlocks++;
+                    }
+                });
+            });
+            
+            // Подготавливаем данные для графика
+            const labels = [];
+            const data = [];
+            const colors = [];
+            
+            tags.forEach(tag => {
+                if (tagStats[tag.id].count > 0) {
+                    labels.push(tag.name);
+                    data.push(tagStats[tag.id].count * 0.25); // 15 минут = 0.25 часа
+                    colors.push(tag.color);
+                }
+            });
+            
+            // Создаем график
+            if (window.dailyChartInstance) {
+                window.dailyChartInstance.destroy();
+            }
+            
+            window.dailyChartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: 'white',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const percentage = Math.round((value / (totalBlocks * 0.25)) * 100);
+                                    return `${context.label}: ${value.toFixed(2)} ч (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Обновление графика за неделю
+        function updateWeeklyChart() {
+            const ctx = document.getElementById('weeklyChart').getContext('2d');
+            const timeBlocksData = JSON.parse(localStorage.getItem('timeBlocks'));
+            const tags = JSON.parse(localStorage.getItem('tags'));
+            
+            // Получаем даты за последние 7 дней
+            const dates = [];
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                dates.push(date.toISOString().split('T')[0]);
+            }
+            
+            // Подготавливаем данные для графика
+            const datasets = [];
+            
+            tags.forEach(tag => {
+                const data = [];
+                
+                dates.forEach(date => {
+                    let count = 0;
+                    if (timeBlocksData[date]) {
+                        Object.values(timeBlocksData[date]).forEach(tagId => {
+                            if (tagId === tag.id) {
+                                count++;
+                            }
+                        });
+                    }
+                    data.push(count * 0.25); // 15 минут = 0.25 часа
+                });
+                
+                datasets.push({
+                    label: tag.name,
+                    data: data,
+                    backgroundColor: tag.color,
+                    borderColor: tag.color,
+                    borderWidth: 1,
+                    fill: false
+                });
+            });
+            
+            // Форматируем даты для подписей
+            const formattedDates = dates.map(date => {
+                const d = new Date(date);
+                return d.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' });
+            });
+            
+            // Создаем график
+            if (window.weeklyChartInstance) {
+                window.weeklyChartInstance.destroy();
+            }
+            
+            window.weeklyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: formattedDates,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Часы'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Обновление графика за месяц
+        function updateMonthlyChart() {
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            const timeBlocksData = JSON.parse(localStorage.getItem('timeBlocks'));
+            const tags = JSON.parse(localStorage.getItem('tags'));
+            
+            // Получаем даты за последние 30 дней
+            const dates = [];
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                dates.push(date.toISOString().split('T')[0]);
+            }
+            
+            // Агрегируем данные по неделям
+            const weeks = [];
+            let currentWeek = [];
+            
+            dates.forEach((date, index) => {
+                currentWeek.push(date);
+                
+                if ((index + 1) % 7 === 0 || index === dates.length - 1) {
+                    weeks.push([...currentWeek]);
+                    currentWeek = [];
+                }
+            });
+            
+            // Подготавливаем данные для графика
+            const datasets = [];
+            
+            tags.forEach(tag => {
+                const data = [];
+                
+                weeks.forEach(week => {
+                    let total = 0;
+                    
+                    week.forEach(date => {
+                        if (timeBlocksData[date]) {
+                            Object.values(timeBlocksData[date]).forEach(tagId => {
+                                if (tagId === tag.id) {
+                                    total++;
+                                }
+                            });
+                        }
+                    });
+                    
+                    data.push(total * 0.25); // 15 минут = 0.25 часа
+                });
+                
+                datasets.push({
+                    label: tag.name,
+                    data: data,
+                    backgroundColor: tag.color,
+                    borderColor: tag.color,
+                    borderWidth: 1,
+                    fill: false
+                });
+            });
+            
+            // Форматируем недели для подписей
+            const weekLabels = weeks.map(week => {
+                const firstDate = new Date(week[0]);
+                const lastDate = new Date(week[week.length - 1]);
+                return `${firstDate.getDate()}-${lastDate.getDate()} ${firstDate.toLocaleDateString('ru-RU', { month: 'short' })}`;
+            });
+            
+            // Создаем график
+            if (window.monthlyChartInstance) {
+                window.monthlyChartInstance.destroy();
+            }
+            
+            window.monthlyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: weekLabels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Часы'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
